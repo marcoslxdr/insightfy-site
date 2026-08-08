@@ -1,0 +1,110 @@
+name: Deploy Blog Insightfy
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "apps/web/**"
+      - "packages/**"
+      - ".github/workflows/deploy-blog.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-blog
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install pnpm
+        run: corepack enable && pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint + typecheck
+        run: |
+          cd apps/web
+          pnpm lint
+          pnpm typecheck
+
+      - name: Build (production)
+        env:
+          NEXT_PUBLIC_SITE_URL: https://insightfy.com.br
+        run: |
+          cd apps/web
+          pnpm build
+
+      - name: Prepare release bundle
+        run: |
+          RELEASE_SHA="$(git rev-parse --short=8 HEAD)"
+          echo "RELEASE_SHA=${RELEASE_SHA}" >> "$GITHUB_ENV"
+          # dist do Next standalone + scripts de runtime + assets estáticos
+          mkdir -p dist/scripts
+          cp -r apps/web/.next/standalone/* dist/ 2>/dev/null || true
+          cp -r apps/web/.next/static dist/apps/web/.next/static 2>/dev/null || true
+          cp -r apps/web/public dist/apps/web/public 2>/dev/null || true
+          cp apps/web/scripts/serve-vps.mjs dist/scripts/ 2>/dev/null || true
+          cp apps/web/scripts/lead-proxy.mjs dist/scripts/ 2>/dev/null || true
+          cp apps/web/scripts/static-assets.mjs dist/scripts/ 2>/dev/null || true
+          cp apps/web/scripts/verify-site-spec.mjs dist/scripts/ 2>/dev/null || true
+          tar -czf release.tar.gz dist
+          echo "RELEASE_BUNDLE=release.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Deploy to VPS (rsync via SSH)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "release.tar.gz"
+          target: "/tmp/insightfy-release"
+          strip_components: 0
+
+      - name: Install release on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+            RELEASE_SHA="${{ env.RELEASE_SHA }}"
+            RELEASE_DIR="/srv/insightfy-site/releases/${RELEASE_SHA}"
+            rm -rf "${RELEASE_DIR}"
+            mkdir -p "${RELEASE_DIR}"
+            tar -xzf /tmp/insightfy-release/release.tar.gz -C "${RELEASE_DIR}"
+            # carregar env de produção (NEXT_PUBLIC_* e PORT) se existir
+            if [ -f /srv/insightfy-site/.env ]; then
+              cp /srv/insightfy-site/.env "${RELEASE_DIR}/.env"
+            fi
+            ln -sfn "${RELEASE_DIR}" /srv/insightfy-site/current
+            # reiniciar o processo do site
+            pkill -f "serve-vps.mjs" || true
+            sleep 1
+            cd "${RELEASE_DIR}"
+            if [ -f .env ]; then
+              set -a; . ./.env; set +a
+            fi
+            nohup node scripts/serve-vps.mjs > /var/log/insightfy-site.log 2>&1 &
+            sleep 4
+            # health check
+            curl -sf -o /dev/null http://127.0.0.1:3010/blog && echo "✅ Site no ar (release ${RELEASE_SHA})" || echo "⚠️ Health check falhou"
+            # limpar releases antigos (manter últimos 5)
+            ls -1dt /srv/insightfy-site/releases/*/ | tail -n +6 | xargs -r rm -rf

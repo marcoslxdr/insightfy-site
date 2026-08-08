@@ -236,6 +236,8 @@ export const en: Dictionary = {
       agentes: "Agents",
       automacao: "Automation",
       "casos-ia": "AI cases",
+      "atendimento-e-vendas": "Service & sales",
+      "governanca-de-ia": "AI governance",
     },
     readingTime: "{n} min read",
     related: "Keep reading",

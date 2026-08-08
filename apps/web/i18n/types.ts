@@ -118,6 +118,8 @@ export interface Dictionary {
       agentes: string;
       automacao: string;
       "casos-ia": string;
+      "atendimento-e-vendas": string;
+      "governanca-de-ia": string;
     };
     readingTime: string;
     related: string;

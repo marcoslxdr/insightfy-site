@@ -1,6 +1,12 @@
 import type { Locale } from "@/i18n/types";
 
-export const BLOG_CATEGORIES = ["agentes", "automacao", "casos-ia"] as const;
+export const BLOG_CATEGORIES = [
+  "agentes",
+  "automacao",
+  "casos-ia",
+  "atendimento-e-vendas",
+  "governanca-de-ia",
+] as const;
 
 export type BlogCategory = (typeof BLOG_CATEGORIES)[number];
 
