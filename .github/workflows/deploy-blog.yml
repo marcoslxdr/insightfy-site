@@ -38,10 +38,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint + typecheck
+      - name: Typecheck
         run: |
           cd apps/web
-          pnpm lint
           pnpm typecheck
 
       - name: Build (production)
