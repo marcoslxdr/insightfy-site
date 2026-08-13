@@ -103,7 +103,7 @@ jobs:
             if [ -f .env ]; then
               set -a; . ./.env; set +a
             fi
-            nohup env PORT=3010 HOSTNAME=127.0.0.1 INSIGHTFY_BUILD_SHA="${RELEASE_SHA}" node apps/web/server.js > /var/log/insightfy-site.log 2>&1 &
+            nohup env PORT=3010 HOSTNAME=127.0.0.1 NEXT_PUBLIC_SITE_URL=https://insightfy.com.br INSIGHTFY_BUILD_SHA="${RELEASE_SHA}" node apps/web/server.js > /var/log/insightfy-site.log 2>&1 &
             echo $! > /run/insightfy-site.pid
             sleep 4
             # health check

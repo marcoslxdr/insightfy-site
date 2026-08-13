@@ -4,7 +4,9 @@ import { defaultLocale } from "@/i18n";
 
 /** Redirect the bare root `/` to the default locale. */
 export function middleware(request: NextRequest) {
-  return NextResponse.redirect(new URL(`/${defaultLocale}`, request.url));
+  const publicOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
+  const origin = publicOrigin ? `${publicOrigin}/` : request.url;
+  return NextResponse.redirect(new URL(`/${defaultLocale}`, origin));
 }
 
 export const config = {
