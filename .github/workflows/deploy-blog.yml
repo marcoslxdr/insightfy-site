@@ -43,6 +43,11 @@ jobs:
           cd apps/web
           pnpm typecheck
 
+      - name: Verify copy contracts
+        run: |
+          cd apps/web
+          node --test scripts/site-copy-overrides.test.mjs
+
       - name: Build (production)
         env:
           NEXT_PUBLIC_SITE_URL: https://insightfy.com.br
@@ -83,9 +88,42 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
-            set -e
+            set -Eeuo pipefail
             RELEASE_SHA="${{ env.RELEASE_SHA }}"
             RELEASE_DIR="/srv/insightfy-site/releases/${RELEASE_SHA}"
+            CURRENT_LINK="/srv/insightfy-site/current"
+            PREVIOUS_RELEASE=""
+            ROLLING_BACK=0
+            if [ -L "${CURRENT_LINK}" ]; then
+              PREVIOUS_RELEASE="$(readlink -f "${CURRENT_LINK}")"
+            fi
+
+            rollback() {
+              failure_code=$?
+              if [ "${ROLLING_BACK}" -eq 1 ]; then
+                exit "${failure_code}"
+              fi
+              ROLLING_BACK=1
+              trap - ERR
+              echo "Deploy failed; restoring previous release ${PREVIOUS_RELEASE:-none}"
+              if [ -f /run/insightfy-site.pid ]; then
+                kill "$(cat /run/insightfy-site.pid)" 2>/dev/null || true
+              fi
+              if [ -n "${PREVIOUS_RELEASE}" ] && [ -d "${PREVIOUS_RELEASE}" ]; then
+                ln -sfn "${PREVIOUS_RELEASE}" "${CURRENT_LINK}"
+                cd "${PREVIOUS_RELEASE}"
+                if [ -f .env ]; then
+                  set -a; . ./.env; set +a
+                fi
+                nohup env PORT=3010 HOSTNAME=127.0.0.1 NEXT_PUBLIC_SITE_URL=https://insightfy.com.br node apps/web/server.js > /var/log/insightfy-site.log 2>&1 &
+                echo $! > /run/insightfy-site.pid
+                sleep 4
+                curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3010/pt >/dev/null || true
+              fi
+              exit "${failure_code}"
+            }
+            trap rollback ERR
+
             rm -rf "${RELEASE_DIR}"
             mkdir -p "${RELEASE_DIR}"
             tar -xzf /tmp/insightfy-release/release.tar.gz -C "${RELEASE_DIR}"
@@ -93,7 +131,7 @@ jobs:
             if [ -f /srv/insightfy-site/.env ]; then
               cp /srv/insightfy-site/.env "${RELEASE_DIR}/.env"
             fi
-            ln -sfn "${RELEASE_DIR}" /srv/insightfy-site/current
+            ln -sfn "${RELEASE_DIR}" "${CURRENT_LINK}"
             # reiniciar somente processo deste site pelo PID dedicado
             if [ -f /run/insightfy-site.pid ]; then
               kill "$(cat /run/insightfy-site.pid)" 2>/dev/null || true
@@ -105,8 +143,18 @@ jobs:
             fi
             nohup env PORT=3010 HOSTNAME=127.0.0.1 NEXT_PUBLIC_SITE_URL=https://insightfy.com.br INSIGHTFY_BUILD_SHA="${RELEASE_SHA}" node apps/web/server.js > /var/log/insightfy-site.log 2>&1 &
             echo $! > /run/insightfy-site.pid
-            sleep 4
-            # health check
-            curl -sf -o /dev/null http://127.0.0.1:3010/pt/blog && echo "✅ Site no ar (release ${RELEASE_SHA})" || echo "⚠️ Health check falhou"
+            # Required readiness checks. Any failure triggers rollback above.
+            for attempt in 1 2 3 4 5 6; do
+              if curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3010/pt >/dev/null && \
+                 curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3010/pt/blog >/dev/null; then
+                echo "Site ready (release ${RELEASE_SHA})"
+                break
+              fi
+              if [ "${attempt}" -eq 6 ]; then
+                false
+              fi
+              sleep 2
+            done
+            trap - ERR
             # limpar releases antigos (manter últimos 5)
             ls -1dt /srv/insightfy-site/releases/*/ | tail -n +6 | xargs -r rm -rf
