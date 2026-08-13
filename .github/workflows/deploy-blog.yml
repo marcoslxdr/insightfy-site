@@ -177,7 +177,7 @@ jobs:
               for attempt in 1 2 3 4 5 6; do
                 pid="$(cat /run/insightfy-site.pid 2>/dev/null || true)"
                 cwd="$(readlink -f "/proc/${pid}/cwd" 2>/dev/null || true)"
-                if [ "${cwd}" = "${expected_release}" ] && \
+                if [ "${cwd}" = "${expected_release}/apps/web" ] && \
                    curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3010/pt >/dev/null && \
                    curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3010/pt/blog >/dev/null; then
                   return 0
