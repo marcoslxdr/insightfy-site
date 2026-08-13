@@ -55,16 +55,12 @@ jobs:
           echo "RELEASE_SHA=${RELEASE_SHA}" >> "$GITHUB_ENV"
           # dist do Next standalone + scripts de runtime + assets estáticos
           mkdir -p dist/scripts
-          cp -r apps/web/.next/standalone/* dist/ 2>/dev/null || true
-          cp -r apps/web/.next/static dist/apps/web/.next/static 2>/dev/null || true
-          cp -r apps/web/public dist/apps/web/public 2>/dev/null || true
-          cp apps/web/scripts/serve-vps.mjs dist/scripts/ 2>/dev/null || true
-          cp apps/web/scripts/lead-proxy.mjs dist/scripts/ 2>/dev/null || true
-          cp apps/web/scripts/static-assets.mjs dist/scripts/ 2>/dev/null || true
-          cp apps/web/scripts/site-copy-overrides.mjs dist/scripts/ 2>/dev/null || true
-          cp apps/web/scripts/verify-site-spec.mjs dist/scripts/ 2>/dev/null || true
-          cp apps/web/scripts/verify-copy-overrides.mjs dist/scripts/ 2>/dev/null || true
-          tar -czf release.tar.gz dist
+          cp -a apps/web/.next/standalone/. dist/
+          cp -a apps/web/.next/static dist/apps/web/.next/static
+          cp -a apps/web/public dist/apps/web/public
+          cp apps/web/scripts/verify-site-spec.mjs dist/scripts/
+          cp apps/web/scripts/verify-copy-overrides.mjs dist/scripts/
+          tar -czf release.tar.gz -C dist .
           echo "RELEASE_BUNDLE=release.tar.gz" >> "$GITHUB_ENV"
 
       - name: Deploy to VPS (rsync via SSH)
@@ -97,16 +93,20 @@ jobs:
               cp /srv/insightfy-site/.env "${RELEASE_DIR}/.env"
             fi
             ln -sfn "${RELEASE_DIR}" /srv/insightfy-site/current
-            # reiniciar o processo do site
-            pkill -f "serve-vps.mjs" || true
+            # reiniciar somente processo deste site; não tocar em outros serve-vps
+            if [ -f /run/insightfy-site.pid ]; then
+              kill "$(cat /run/insightfy-site.pid)" 2>/dev/null || true
+            fi
+            pkill -f '/srv/insightfy-site/current/scripts/serve-vps.mjs' || true
             sleep 1
             cd "${RELEASE_DIR}"
             if [ -f .env ]; then
               set -a; . ./.env; set +a
             fi
-            nohup node scripts/serve-vps.mjs > /var/log/insightfy-site.log 2>&1 &
+            nohup env PORT=3010 HOSTNAME=127.0.0.1 INSIGHTFY_BUILD_SHA="${RELEASE_SHA}" node apps/web/server.js > /var/log/insightfy-site.log 2>&1 &
+            echo $! > /run/insightfy-site.pid
             sleep 4
             # health check
-            curl -sf -o /dev/null http://127.0.0.1:3010/blog && echo "✅ Site no ar (release ${RELEASE_SHA})" || echo "⚠️ Health check falhou"
+            curl -sf -o /dev/null http://127.0.0.1:3010/pt/blog && echo "✅ Site no ar (release ${RELEASE_SHA})" || echo "⚠️ Health check falhou"
             # limpar releases antigos (manter últimos 5)
             ls -1dt /srv/insightfy-site/releases/*/ | tail -n +6 | xargs -r rm -rf
