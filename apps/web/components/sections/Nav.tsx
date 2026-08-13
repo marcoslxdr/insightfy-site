@@ -13,6 +13,7 @@ import { Button, Container, cn } from "@insightfy/ui";
 import { Logo } from "@/components/Logo";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import type { Dictionary, Locale } from "@/i18n/types";
+import { COMPANY_BRAND } from "@/lib/brand";
 
 export interface NavProps {
   dict: Dictionary["nav"];
@@ -40,7 +41,7 @@ export function Nav({ dict, locale }: NavProps) {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-bg-base/70 backdrop-blur-md supports-[backdrop-filter]:bg-bg-base/60">
       <Container className="flex h-16 items-center justify-between gap-4">
-        <Link href={`/${locale}`} aria-label="Insightfy" className="shrink-0">
+        <Link href={`/${locale}`} aria-label={COMPANY_BRAND.publicName} className="shrink-0">
           <Logo />
         </Link>
 

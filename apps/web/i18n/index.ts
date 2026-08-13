@@ -1,6 +1,7 @@
 import type { Dictionary, Locale } from "./types";
 import { pt } from "./dictionaries/pt";
 import { en } from "./dictionaries/en";
+import { applyCompanyBrand } from "@/lib/brand";
 
 export const locales: Locale[] = ["pt", "en"];
 export const defaultLocale: Locale = "pt";
@@ -12,7 +13,7 @@ export function isLocale(value: string): value is Locale {
 }
 
 export function getDictionary(locale: Locale): Dictionary {
-  return dictionaries[locale] ?? dictionaries[defaultLocale];
+  return applyCompanyBrand(dictionaries[locale] ?? dictionaries[defaultLocale]);
 }
 
 export * from "./types";

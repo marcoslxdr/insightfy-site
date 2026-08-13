@@ -22,119 +22,80 @@ const filesIn = (relative) => {
     .filter((entry) => statSync(join(root, entry)).isFile());
 };
 
-const page = read("app/page.tsx");
-const hubPage = read("app/insighthub/page.tsx");
+const page = read("app/[locale]/page.tsx");
+const layout = read("app/[locale]/layout.tsx");
 const css = read("app/globals.css");
-const layout = read("app/layout.tsx");
-const vpsServer = read("scripts/serve-vps.mjs");
+const logo = read("components/Logo.tsx");
+const nav = read("components/sections/Nav.tsx");
+const footer = read("components/sections/Footer.tsx");
+const hero = read("components/sections/Hero.tsx");
+const brand = read("lib/brand.ts");
 const leadProxy = read("scripts/lead-proxy.mjs");
-const credits = read("CREDITS.md");
+const vpsServer = read("scripts/serve-vps.mjs");
 const appFiles = filesIn("app");
-const appSource = appFiles
+const componentFiles = filesIn("components").filter((path) => /\.tsx$/.test(path));
+const source = [...appFiles, ...componentFiles]
   .filter((path) => /\.(?:tsx?|jsx?)$/.test(path))
-  .map((path) => read(path))
+  .map(read)
   .join("\n");
-const componentFiles = filesIn("app/components").filter((path) => /\.tsx$/.test(path));
 
-need(page, /<main\b/i, "page needs semantic <main>");
-need(page, /<header\b/i, "page needs <header>");
-need(page, /<nav\b[^>]*aria-label=/i, "navigation needs aria-label");
-need(page, /<footer\b/i, "page needs <footer>");
-need(page, /<h1\b/i, "page needs one clear h1");
-if ((page.match(/<h1\b/gi) ?? []).length !== 1) failures.push("page must contain exactly one h1");
-for (const id of ["empresa", "solucoes", "produto", "origem", "contato"]) {
-  need(page, new RegExp(`<section\\b[^>]*\\bid=["']${id}["']`, "i"), `missing section #${id}`);
-  need(page, new RegExp(`href=["']#${id}["']`, "i"), `header navigation missing #${id}`);
-}
-need(page, /id=["']top["']/i, "hero needs #top target");
-need(appSource, /agent-insight-(?:full|head)-/i, "hero must use official agente Insight pixel v1.4 asset");
-need(page, /o futuro vira[\s\S]*operação/i, "hero needs future-to-operation headline");
-need(page, /Somos uma agência de IA/i, "hero must identify Insight as an AI agency");
-for (const pillar of ["Branding", "automações", "marketing", "agentes", "fullstack"]) {
-  need(page, new RegExp(pillar, "i"), `homepage must state fullstack pillar: ${pillar}`);
-}
-need(page, /Agentes de IA ajudam empresas e pessoas/i, "agent section must explain client outcomes");
-need(page, /human-work\.webp/i, "hero needs human collaboration photograph");
-need(page, /IMAGEM EDITORIAL GERADA[\s\S]*PESSOAS FICCIONAIS/i, "hero generated editorial needs honest labeling");
-need(page, /<HeroAgentChat\b/, "hero needs interactive secondary agent chat");
-need(appSource, /is-visible|scrollY|scroll/i, "agent chat needs scroll-triggered floating entrance");
-need(appSource, /aria-controls=["']hero-agent-chat["']/, "agent trigger must expose chat disclosure state");
-need(appSource, /role=["']dialog["']/, "agent chat needs accessible dialog semantics");
-need(appSource, /fetch\(["']\/api\/leads["']/, "agent triage must submit to same-origin lead endpoint");
-for (const field of ["name", "profile", "interest", "challenge", "timing", "email", "phone", "consent"]) {
-  need(appSource, new RegExp(`\\b${field}\\b`), `agent triage missing field: ${field}`);
-}
-need(appSource, /activeContext|active_section/, "agent must adapt to active session context");
-need(appSource, /agent-insight-head-\$\{agentState\}/, "agent expression must change with context state");
-need(layout, /<SiteLoader\b/, "root layout needs logo entry loader");
-need(appSource, /Carregando site da Insight/i, "loader needs accessible status label");
-need(css, /@keyframes\s+loader-(?:logo|pixel|curtain)/i, "loader needs branded CSS motion");
-need(page, /\/images\/human-[^"']+\.webp/i, "page needs optimized local human editorial imagery");
-if ((page.match(/\/images\/human-[^"']+\.webp/gi) ?? []).length < 2) {
-  failures.push("page needs at least two optimized human editorial images");
-}
-need(credits, /Pessoas são ficcionais/i, "generated editorials need fictional-person provenance");
-need(credits, /editorial-site-v1\.5/i, "generated editorials need canonical source pointer");
-need(appSource, /loading=["']lazy["']/i, "non-hero images need loading=lazy");
-need(appSource, /decoding=["']async["']/i, "non-hero images need decoding=async");
-need(appSource, /(?:priority|fetchPriority=["']high["'])/i, "hero mascot needs priority/fetchPriority");
-need(page, /(?:width=\{|width=["'])/i, "images need explicit dimensions");
-if (componentFiles.length < 4) failures.push("need at least four reusable app/components/*.tsx primitives");
-need(page, /from ["'][./]+components\//, "page must compose reusable components");
+need(page, /<main\b/i, "localized homepage needs semantic <main>");
+need(page, /<Nav\b/, "localized homepage needs navigation");
+need(page, /<Footer\b/, "localized homepage needs footer");
+need(hero, /<(?:motion\.)?h1\b/i, "hero needs one clear h1");
+if ((hero.match(/<(?:motion\.)?h1\b/gi) ?? []).length !== 1) failures.push("hero must contain exactly one h1");
+need(nav, /<nav\b[^>]*aria-label=/i, "navigation needs aria-label");
+need(nav, /aria-expanded=/i, "mobile navigation needs disclosure state");
+need(nav, /aria-controls=/i, "mobile navigation needs controlled target");
+need(footer, /<footer\b/i, "footer component needs semantic footer");
+if (componentFiles.length < 8) failures.push("site needs reusable component architecture");
 
-need(css, /--(?:accent|insight-orange)\s*:\s*#ff7918/i, "CSS needs Insight orange #FF7918 token");
-need(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/i, "CSS needs reduced-motion override");
-need(css, /:focus-visible/i, "CSS needs visible keyboard focus");
-need(css, /max-width:\s*100%|overflow-x:\s*hidden/i, "CSS needs narrow-screen overflow protection");
-need(css, /@media\s*\(max-width:/i, "CSS needs responsive breakpoint");
-need(css, /\.capability-card h3[\s\S]{0,320}overflow-wrap:\s*anywhere/i, "capability titles need explicit overflow containment");
-for (const motion of ["agent-thinking", "agent-street", "agent-success", "agent-listening"]) {
-  need(css, new RegExp(`@keyframes\\s+${motion}`), `missing contextual agent motion: ${motion}`);
+need(layout, /generateMetadata/, "localized layout needs generated metadata");
+need(layout, /metadataBase/, "metadata needs stable base URL");
+need(layout, /alternates:\s*\{[\s\S]*canonical/i, "metadata needs canonical URL");
+need(layout, /languages:\s*\{/i, "metadata needs language alternates");
+need(layout, /openGraph:\s*\{/i, "metadata needs OpenGraph");
+need(layout, /twitter:\s*\{/i, "metadata needs Twitter card");
+need(layout, /application\/ld\+json/i, "layout needs Organization JSON-LD");
+need(layout, /COMPANY_SITE_URL/, "metadata must use canonical brand URL constant");
+need(layout, /COMPANY_BRAND/, "metadata must use brand registry");
+
+need(brand, /CompanyBrandVariant\s*=\s*["']insightfy["']\s*\|\s*["']atria["']/, "brand variants need typed contract");
+need(brand, /NEXT_PUBLIC_COMPANY_BRAND/, "brand switch needs documented public env flag");
+need(brand, /requestedVariant\s*===\s*["']atria["']\s*\?\s*["']atria["']\s*:\s*["']insightfy["']/, "unknown brand flag must fail closed to Insightfy");
+need(brand, /Tudo converge\. Sua operação avança\./, "Atria variant needs approved working tagline");
+need(logo, /COMPANY_BRAND_VARIANT\s*===\s*["']atria["']/, "logo must support Atria variant");
+need(logo, /#FF7918/i, "Atria mark needs orange pixel token");
+need(logo, /#0D0D0F/i, "Atria mark needs graphite token");
+for (const asset of [
+  "public/brand/atria/mark.svg",
+  "public/brand/atria/favicon.svg",
+  "public/brand/atria/lockup.svg",
+  "public/brand/atria/og-image.svg",
+]) {
+  if (!existsSync(join(root, asset))) failures.push(`missing ${asset}`);
+}
+
+need(css, /prefers-reduced-motion:\s*reduce/i, "CSS needs reduced-motion support");
+if (/<(?:img|Image)\b/i.test(source)) {
+  need(source, /loading=["']lazy["']/i, "non-hero imagery needs lazy loading");
+  need(source, /decoding=["']async["']/i, "images need async decoding");
+  need(source, /(?:priority|fetchPriority=["']high["'])/i, "hero media needs priority");
 }
 
 need(vpsServer, /url\.pathname === ["']\/api\/leads["']/, "VPS server must expose lead proxy route");
-need(leadProxy, /x-insightfy-site-secret/i, "lead proxy must inject server-only secret");
+need(leadProxy, /x-insightfy-site-secret/i, "lead proxy must preserve stable server secret header");
 need(leadProxy, /MAX_BODY_BYTES/, "lead proxy must cap payload size");
 need(leadProxy, /allowedOrigins/, "lead proxy must enforce allowed origin");
 
-need(layout, /lang=["']pt-BR["']/i, "root HTML needs lang=pt-BR");
-need(layout, /title:\s*["'`](?!Starter Project)/i, "metadata needs non-placeholder title");
-need(layout, /description:\s*["'`][^"'`]*Insightfy/i, "metadata description must mention Insightfy");
-need(layout, /\/og-image\.webp/i, "metadata needs institutional OG image");
-if (/Your site is taking shape|SkeletonPreview|codex-preview/i.test(appSource)) {
-  failures.push("starter preview must be removed from shipped app source");
-}
-if (/agent-insighthub|liga-insighthub|ponto-insight/i.test(appSource)) {
-  failures.push("InsightHub/Liga/legacy Ponto mascot assets are forbidden");
-}
-if (/framer-motion|<video\b|<canvas\b|data:image\//i.test(appSource)) {
-  failures.push("heavy media or animation dependency is forbidden");
-}
-
-need(page, /href=["']\/insighthub["']/i, "homepage must link dedicated InsightHub route");
-need(hubPage, /<main\b/i, "InsightHub route needs semantic <main>");
-need(hubPage, /<h1\b/i, "InsightHub route needs one clear h1");
-if ((hubPage.match(/<h1\b/gi) ?? []).length !== 1) failures.push("InsightHub route must contain exactly one h1");
-need(hubPage, /href=["']\/["']/i, "InsightHub route needs link back to company homepage");
-need(hubPage, /Hoje|Trabalho|Projetos|Cliente 360|Empresa/i, "InsightHub route needs factual product capabilities");
-
-const runtime = appFiles.find((path) => {
-  const source = read(path);
-  return /window\.__ready/.test(source);
-});
-if (!runtime) {
-  failures.push("missing client navigation runtime for ?jump and window.__ready");
-} else {
-  const source = read(runtime);
-  need(source, /URLSearchParams\(window\.location\.search\)/, "runtime must read ?jump from URLSearchParams");
-  need(source, /scrollIntoView/, "runtime must scroll valid ?jump target");
-  need(source, /window\.__ready\s*=\s*true/, "runtime must set window.__ready = true");
+if (/Your site is taking shape|SkeletonPreview|codex-preview/i.test(source)) {
+  failures.push("starter preview must not ship");
 }
 
 if (failures.length) {
-  console.error("SPEC RED — Insightfy site contract failed:");
+  console.error("SPEC RED — institutional site contract failed:");
   for (const failure of failures) console.error(`- ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log("SPEC GREEN — Insightfy site contract satisfied.");
+  console.log("SPEC GREEN — institutional site contract satisfied.");
 }

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Atria</title>
+  <desc id="desc">Tudo converge. Sua operação avança.</desc>
+  <rect width="1200" height="630" fill="#F5F3EF"/>
+  <path stroke="#0D0D0F" stroke-opacity=".08" d="M0 105h1200M0 210h1200M0 315h1200M0 420h1200M0 525h1200M200 0v630M400 0v630M600 0v630M800 0v630M1000 0v630"/>
+  <rect x="88" y="80" width="112" height="112" rx="30" fill="#0D0D0F"/>
+  <path fill="#fff" fill-rule="evenodd" d="M116 115c0-11.598 9.402-21 21-21h35v84h-35c-11.598 0-21-9.402-21-21v-9.625c0-5.245 1.92-10.041 5.096-13.721C117.92 130.374 116 125.578 116 120.334V115Zm22.75 5.25a10.5 10.5 0 0 0-10.5 10.5v10.5a10.5 10.5 0 0 0 10.5 10.5h15.75v-31.5h-15.75Z"/>
+  <rect x="138.75" y="130.75" width="14" height="14" fill="#FF7918"/>
+  <text x="232" y="168" fill="#0D0D0F" font-family="Arial, Helvetica, sans-serif" font-size="92" font-weight="800" letter-spacing="-5">atria</text>
+  <text x="88" y="390" fill="#0D0D0F" font-family="Arial, Helvetica, sans-serif" font-size="66" font-weight="700">Tudo converge.</text>
+  <text x="88" y="468" fill="#0D0D0F" font-family="Arial, Helvetica, sans-serif" font-size="66" font-weight="700">Sua operação avança<tspan fill="#FF7918">.</tspan></text>
+  <text x="92" y="548" fill="#67676C" font-family="monospace" font-size="22">TECNOLOGIA · PROCESSOS · DADOS · PESSOAS</text>
+</svg>
