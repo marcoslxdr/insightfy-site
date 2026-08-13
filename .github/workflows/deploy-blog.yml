@@ -94,11 +94,10 @@ jobs:
               cp /srv/insightfy-site/.env "${RELEASE_DIR}/.env"
             fi
             ln -sfn "${RELEASE_DIR}" /srv/insightfy-site/current
-            # reiniciar somente processo deste site; não tocar em outros serve-vps
+            # reiniciar somente processo deste site pelo PID dedicado
             if [ -f /run/insightfy-site.pid ]; then
               kill "$(cat /run/insightfy-site.pid)" 2>/dev/null || true
             fi
-            pkill -f '/srv/insightfy-site/current/scripts/serve-vps.mjs' || true
             sleep 1
             cd "${RELEASE_DIR}"
             if [ -f .env ]; then
