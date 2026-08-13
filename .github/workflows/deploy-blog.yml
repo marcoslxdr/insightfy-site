@@ -61,7 +61,9 @@ jobs:
           cp apps/web/scripts/serve-vps.mjs dist/scripts/ 2>/dev/null || true
           cp apps/web/scripts/lead-proxy.mjs dist/scripts/ 2>/dev/null || true
           cp apps/web/scripts/static-assets.mjs dist/scripts/ 2>/dev/null || true
+          cp apps/web/scripts/site-copy-overrides.mjs dist/scripts/ 2>/dev/null || true
           cp apps/web/scripts/verify-site-spec.mjs dist/scripts/ 2>/dev/null || true
+          cp apps/web/scripts/verify-copy-overrides.mjs dist/scripts/ 2>/dev/null || true
           tar -czf release.tar.gz dist
           echo "RELEASE_BUNDLE=release.tar.gz" >> "$GITHUB_ENV"
 

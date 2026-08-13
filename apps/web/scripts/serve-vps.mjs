@@ -3,6 +3,7 @@ import { Readable } from "node:stream";
 
 import worker from "../dist/server/index.js";
 import { forwardLeadRequest, resolveClientIp } from "./lead-proxy.mjs";
+import { applySiteCopyOverrides } from "./site-copy-overrides.mjs";
 import { serveStaticAsset } from "./static-assets.mjs";
 
 const port = Number.parseInt(process.env.PORT ?? "3010", 10);
@@ -32,7 +33,7 @@ const server = createServer(async (incoming, outgoing) => {
 
     const request = new Request(url, init);
     const staticResponse = await serveStaticAsset(request);
-    const response = staticResponse ?? (url.pathname === "/api/leads"
+    const sourceResponse = staticResponse ?? (url.pathname === "/api/leads"
       ? await forwardLeadRequest(request, {
           clientIp: resolveClientIp(request.headers, incoming.socket.remoteAddress ?? "unknown"),
         })
@@ -48,6 +49,10 @@ const server = createServer(async (incoming, outgoing) => {
           passThroughOnException() {},
         },
       ));
+    const response = await applySiteCopyOverrides(sourceResponse, {
+      method,
+      pathname: url.pathname,
+    });
 
     outgoing.statusCode = response.status;
     outgoing.statusMessage = response.statusText;
