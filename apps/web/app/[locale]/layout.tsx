@@ -136,7 +136,10 @@ export default async function LocaleLayout({
     url: COMPANY_SITE_URL,
     description:
       locale === "pt" ? COMPANY_BRAND.descriptionPt : COMPANY_BRAND.descriptionEn,
-    logo: `${COMPANY_SITE_URL}/brand/${COMPANY_BRAND_VARIANT}/mark.svg`,
+    logo:
+      COMPANY_BRAND_VARIANT === "atria"
+        ? `${COMPANY_SITE_URL}/brand/atria/mark.svg`
+        : `${COMPANY_SITE_URL}/og-image.webp`,
   };
 
   return (
