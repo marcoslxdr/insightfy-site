@@ -174,11 +174,17 @@ jobs:
               local expected_release="$1"
               local pid=""
               local cwd=""
+              local html=""
+              local asset=""
               for attempt in 1 2 3 4 5 6; do
                 pid="$(cat /run/insightfy-site.pid 2>/dev/null || true)"
                 cwd="$(readlink -f "/proc/${pid}/cwd" 2>/dev/null || true)"
+                html="$(curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3010/pt || true)"
+                asset="$(printf '%s' "${html}" | grep -oE '/_next/static/(css|chunks)/[^" ]+\.(css|js)' | head -n 1 || true)"
                 if [ "${cwd}" = "${expected_release}/apps/web" ] && \
-                   curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3010/pt >/dev/null && \
+                   [ -n "${asset}" ] && \
+                   curl --fail --silent --show-error --max-time 10 "http://127.0.0.1:3010${asset}" >/dev/null && \
+                   curl --fail --silent --show-error --max-time 10 "https://insightfy.com.br${asset}" >/dev/null && \
                    curl --fail --silent --show-error --max-time 10 http://127.0.0.1:3010/pt/blog >/dev/null; then
                   return 0
                 fi
