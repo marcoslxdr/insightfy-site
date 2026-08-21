@@ -46,11 +46,14 @@ jobs:
       - name: Verify copy contracts
         run: |
           cd apps/web
+          node scripts/verify-site-spec.mjs
           node --test scripts/site-copy-overrides.test.mjs
 
       - name: Build (production)
         env:
           NEXT_PUBLIC_SITE_URL: https://insightfy.com.br
+          # Legal gate: keep legacy brand until a cleared public name is approved.
+          NEXT_PUBLIC_COMPANY_BRAND: insightfy
         run: |
           cd apps/web
           pnpm build

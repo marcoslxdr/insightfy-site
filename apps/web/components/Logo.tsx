@@ -1,13 +1,40 @@
-/**
- * Logo — Insightfy wordmark + inline SVG mark (cyan).
- * STABLE: exported as `Logo`. Accepts standard span props for sizing/spacing.
- */
+/** Brand-aware logo. Stable export and props; display identity switches by env. */
 import * as React from "react";
 import { cn } from "@insightfy/ui";
+import { COMPANY_BRAND, COMPANY_BRAND_VARIANT } from "@/lib/brand";
 
 export type LogoProps = React.HTMLAttributes<HTMLSpanElement>;
 
 export function Logo({ className, ...props }: LogoProps) {
+  if (COMPANY_BRAND_VARIANT === "atria") {
+    return (
+      <span
+        className={cn("group inline-flex select-none items-center gap-2.5", className)}
+        {...props}
+      >
+        <svg
+          width="30"
+          height="30"
+          viewBox="0 0 64 64"
+          fill="none"
+          aria-hidden="true"
+          className="shrink-0"
+        >
+          <rect width="64" height="64" rx="18" fill="#0D0D0F" />
+          <path
+            fill="#FFFFFF"
+            fillRule="evenodd"
+            d="M16 20C16 13.373 21.373 8 28 8h20v48H28c-6.627 0-12-5.373-12-12v-5.5c0-2.997 1.097-5.738 2.912-7.841C17.097 28.783 16 26.042 16 23.045V20Zm13 3a6 6 0 0 0-6 6v6a6 6 0 0 0 6 6h9V23h-9Z"
+          />
+          <rect x="29" y="29" width="8" height="8" fill="#FF7918" />
+        </svg>
+        <span className="font-display text-xl font-bold lowercase tracking-[-0.055em] text-text">
+          {COMPANY_BRAND.wordmark}
+        </span>
+      </span>
+    );
+  }
+
   return (
     <span
       className={cn("group inline-flex select-none items-center gap-2", className)}
@@ -55,7 +82,7 @@ export function Logo({ className, ...props }: LogoProps) {
         />
       </svg>
       <span className="font-display text-lg font-bold tracking-tight text-text">
-        Insightfy
+        {COMPANY_BRAND.wordmark}
       </span>
     </span>
   );

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { GridBackground } from "@insightfy/ui";
 import { locales } from "@/i18n";
+import { COMPANY_BRAND, COMPANY_BRAND_VARIANT, COMPANY_SITE_URL } from "@/lib/brand";
 import "../globals.css";
 
 const display = localFont({
@@ -59,23 +60,64 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const isPt = locale === "pt";
+  const title =
+    COMPANY_BRAND_VARIANT === "atria"
+      ? isPt
+        ? "Atria — Tecnologia, dados e pessoas em uma operação conectada"
+        : "Atria — Technology, data, and people in one connected operation"
+      : "Insightfy — Sistemas sob medida e Agentes de IA";
+  const description = isPt
+    ? COMPANY_BRAND.descriptionPt
+    : COMPANY_BRAND.descriptionEn;
+  const canonical = `${COMPANY_SITE_URL}/${locale}`;
 
   return {
-    metadataBase: new URL("https://insightfy.com.br"),
+    metadataBase: new URL(COMPANY_SITE_URL),
     title: {
-      default: "Insightfy — Sistemas sob medida e Agentes de IA",
-      template: "%s · Insightfy",
+      default: title,
+      template: `%s · ${COMPANY_BRAND.publicName}`,
     },
-    description: isPt
-      ? "Software house focada em sistemas sob medida e agentes de IA em produção."
-      : "Software house focused on custom systems and AI agents in production.",
+    description,
+    alternates: {
+      canonical,
+      languages: {
+        "pt-BR": `${COMPANY_SITE_URL}/pt`,
+        "en-US": `${COMPANY_SITE_URL}/en`,
+      },
+    },
     openGraph: {
-      title: "Insightfy",
-      url: `https://insightfy.com.br/${locale}`,
-      siteName: "Insightfy",
+      title,
+      description,
+      url: canonical,
+      siteName: COMPANY_BRAND.publicName,
       locale: isPt ? "pt_BR" : "en_US",
       type: "website",
+      images: [
+        {
+          url:
+            COMPANY_BRAND_VARIANT === "atria"
+              ? "/brand/atria/og-image.svg"
+              : "/og-image.webp",
+          width: 1200,
+          height: 630,
+          alt: COMPANY_BRAND.publicName,
+        },
+      ],
     },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [
+        COMPANY_BRAND_VARIANT === "atria"
+          ? "/brand/atria/og-image.svg"
+          : "/og-image.webp",
+      ],
+    },
+    icons:
+      COMPANY_BRAND_VARIANT === "atria"
+        ? { icon: "/brand/atria/favicon.svg", apple: "/brand/atria/mark.svg" }
+        : undefined,
   };
 }
 
@@ -87,10 +129,26 @@ export default async function LocaleLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: COMPANY_BRAND.publicName,
+    url: COMPANY_SITE_URL,
+    description:
+      locale === "pt" ? COMPANY_BRAND.descriptionPt : COMPANY_BRAND.descriptionEn,
+    logo:
+      COMPANY_BRAND_VARIANT === "atria"
+        ? `${COMPANY_SITE_URL}/brand/atria/mark.svg`
+        : `${COMPANY_SITE_URL}/og-image.webp`,
+  };
 
   return (
     <html lang={locale} className={`${display.variable} ${sans.variable} ${mono.variable}`}>
       <body className="relative min-h-screen bg-bg-base text-text antialiased">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
         <GridBackground />
         <div className="relative z-10">{children}</div>
       </body>
